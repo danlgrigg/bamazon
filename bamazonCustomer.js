@@ -14,45 +14,115 @@ var connection = mysql.createConnection({
   password: "password",
   database: "bamazonItems_db"
 });
+connection.connect();
+// connection.connect(function(err) {
+//   if (err) throw err;
+//   console.log("connected as id " + connection.threadId);
 
-connection.connect(function(err) {
-  if (err) throw err;
-  console.log("connected as id " + connection.threadId);
-  mainMenu();
-  
-});
-
-function mainMenu() {
-    function displayBamazonItems(){
-        connection.query("SELECT * FROM bamazonItems", function(err, res) {
-            if (err) throw err;
-           console.table(res);
-          });
-        userPurchase();
-    }
-    function userPurchase(){
-        displayBamazonItems();
-        inquirer.prompt({
-          name:"item_input",
-          type:"num",
-          message:"What is the item id of the product you would like to buy?"
+// });
+function displayBamazonItems() {
+  connection.query("SELECT * FROM bamazonItems", function(err, res) {
+    if (err) throw err;
+    console.table(res);
+    inquirer
+      .prompt([
+        {
+          name: "item_input",
+          type: "num",
+          message: "What is the item id of the product you would like to buy?"
         },
         {
-            name:"quantity_input",
-            type:"num",
-            message:"How many would you like to buy?"
-        })
-        .then(function(answer){
-            if(answer.item_input.quantity_input<="stock_quantity"){
-                ("UPDATE bamazonItems SET stock_quantity = stock_quantity - quantity_input WHERE item_input = item_id");
-                console.log("You purchased " + answer.quantity_input+ "of " + answer.item_input.item_name)
+          name: "quantity_input",
+          type: "num",
+          message: "How many would you like to buy?"
+        }
+      ])
+      .then(function(answer) {
+        console.log(answer);
+        var itemId = answer.item_input;
+        var quantity = answer.quantity_input;
+        connection.query(
+          "SELECT * FROM bamazonItems WHERE item_id = ?",
+          [itemId],
+          function(err, item) {
+            if (err) {
+              console.log(err);
             }
-            else{
-            console.log("Insufficient quantity!")
-
+            var dbQuantity = item[0].stock_quantity;
+            if (quantity > dbQuantity) {
+              console.log("Insufficent Stock");
+            } else {
+              var difference = dbQuantity - quantity;
+              updateDataBase(difference,itemId);
+              // connection.query(
+              //   "UPDATE bamazonItems SET stock_quantity = ? WHERE item_id = ?",
+              //   [difference, itemId],
+              //   function(err, item) {
+              //     if (err) {
+              //       console.log(err);
+              //     } else {
+              //      connection.query;
+              //     }
+              //   }
+              // );
             }
-        })
-    connection.end();
-    } 
+          }
+        );
+      });
+  });
 }
 
+function updateDataBase(qty,id){
+  connection.query(
+    "UPDATE bamazonItems SET stock_quantity = ? WHERE item_id = ?",
+    [qty, id],
+    function(err, item) {
+      if (err) {
+        console.log(err);
+      } else {
+       connection.query("SELECT * FROM bamazonItems WHERE item_id = ?", [id], function(err,item){
+         if (err){
+           console.log(err);
+         }else{
+           console.table(item);
+         }
+       });
+      }
+    }
+  );
+}
+
+displayBamazonItems();
+
+// function mainMenu() {
+//   function userPurchase() {
+//     displayBamazonItems();
+//     inquirer
+//       .prompt([
+//         {
+//           name: "item_input",
+//           type: "num",
+//           message: "What is the item id of the product you would like to buy?"
+//         },
+//         {
+//           name: "quantity_input",
+//           type: "num",
+//           message: "How many would you like to buy?"
+//         }
+//       ])
+//       .then(function(answer) {
+//         if (answer.item_input.quantity_input <= "stock_quantity") {
+//           ("UPDATE bamazonItems SET stock_quantity = stock_quantity - quantity_input WHERE item_input = item_id");
+//           console.log(
+//             "You purchased " +
+//               answer.quantity_input +
+//               "of " +
+//               answer.item_input.item_name
+//           );
+//         } else {
+//           console.log("Insufficient quantity!");
+//         }
+//       });
+//     connection.end();
+//   }
+// }
